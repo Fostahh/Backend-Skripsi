@@ -38,20 +38,33 @@ const addDisasterHandler = (request, h) => {
 };
 
 const getDisastersHandler = async (request, h) => {
-  const query = db.collection("disasters");
-  const querySnapshot = query.get();
+  try {
+    const query = db.collection("disasters");
+    const querySnapshot = await query.get();
 
-  if (querySnapshot.size > 0) {
-    const a = querySnapshot.docs.data;
-    return h.response({
-      status: "success",
-      data: { a },
+    if (querySnapshot.size > 0) {
+      const disasters = querySnapshot.docs.map((doc) => doc.data());
+
+      return h.response({
+        status: "success",
+        data: { disasters },
+      });
+    } else {
+      const response = h.response({
+        status: "fail",
+        message: "Bencana alam tidak ditemukan",
+      });
+      response.code(404);
+      return response;
+    }
+  } catch (err) {
+    const errorMessage = `${err}`;
+    const response = h.response({
+      status: "fail",
+      message: errorMessage,
     });
-  } else {
-    return h.response({
-      status: "success",
-      data: { disasters },
-    });
+    response.code(500);
+    return response;
   }
 };
 

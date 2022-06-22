@@ -1,93 +1,178 @@
-const disasters = require("./disasters");
-const { Firestore } = require("@google-cloud/firestore");
+const mysql = require("mysql");
 
-const db = new Firestore();
+const con = mysql.createConnection({
+  host: "34.142.231.201",
+  user: "azri",
+  password: "12345",
+  database: "db_skripsi",
+});
 
-const addDisasterHandler = (request, h) => {
-  const { id, latitude, longitude } = request.payload;
+con.connect(function (err) {
+  if (err) throw err;
+  console.log("Database connected");
+});
 
-  const newDisaster = {
-    id,
-    latitude,
-    longitude,
-  };
+const getDisastersHandler = async (_, h) => {
+  return new Promise((resolve, _) => {
+    con.query(
+      "SELECT * FROM bencana_alam WHERE lat IS NOT NULL AND lon IS NOT NULL AND predicted = '0'",
+      (err, data) => {
+        if (err)
+          return resolve(
+            h
+              .response({
+                status: "fail",
+                message: `${err.message}`,
+              })
+              .code(400)
+          );
 
-  disasters.push(newDisaster);
-
-  const isSuccess =
-    disasters.filter((disaster) => disaster.id === id).length > 0;
-
-  if (isSuccess) {
-    const response = h.response({
-      status: "success",
-      message: "Bencana Alam berhasil ditambahkan",
-      data: {
-        disasterId: id,
-      },
-    });
-    response.code(201);
-    return response;
-  }
-
-  const response = h.response({
-    status: "fail",
-    message: "Bencana Alam gagal ditambahkan",
+        if (data.length > 0) {
+          return resolve(
+            h
+              .response({
+                status: "success",
+                data,
+              })
+              .code(200)
+          );
+        } else {
+          return resolve(
+            h
+              .response({
+                status: "success",
+                message: "Tidak ada bencana alam",
+              })
+              .code(200)
+          );
+        }
+      }
+    );
   });
-  response.code(500);
-  return response;
 };
 
-const getDisastersHandler = async (request, h) => {
-  try {
-    const query = db.collection("disasters");
-    const querySnapshot = await query.get();
+const getDisasterByFilterHandler = async (request, h) => {
+  const { filter } = request.params;
 
-    if (querySnapshot.size > 0) {
-      const disasters = querySnapshot.docs.map((doc) => doc.data());
+  if (filter === "gempa") {
+    return new Promise((resolve, _) => {
+      con.query(
+        "SELECT * FROM bencana_alam WHERE filter = ? AND lat IS NOT NULL AND lon IS NOT NULL AND mag IS NOT NULL AND predicted = '0'",
+        [filter],
+        (err, data) => {
+          if (err)
+            return resolve(
+              h
+                .response({
+                  status: "fail",
+                  message: `${err.message}`,
+                })
+                .code(400)
+            );
 
-      return h.response({
-        status: "success",
-        data: { disasters },
-      });
-    } else {
-      const response = h.response({
-        status: "fail",
-        message: "Bencana alam tidak ditemukan",
-      });
-      response.code(404);
-      return response;
-    }
-  } catch (err) {
-    const errorMessage = `${err}`;
-    const response = h.response({
-      status: "fail",
-      message: errorMessage,
+          if (data.length > 0) {
+            return resolve(
+              h
+                .response({
+                  status: "success",
+                  data,
+                })
+                .code(200)
+            );
+          } else {
+            return resolve(
+              h
+                .response({
+                  status: "success",
+                  message: `Bencana alam dengan filter ${filter} tidak ditemukan!`,
+                })
+                .code(200)
+            );
+          }
+        }
+      );
     });
-    response.code(500);
-    return response;
+  } else {
+    return new Promise((resolve, _) => {
+      con.query(
+        "SELECT * FROM bencana_alam WHERE filter = ? AND lat IS NOT NULL AND lon IS NOT NULL AND predicted = '0'",
+        [filter],
+        (err, data) => {
+          if (err)
+            return resolve(
+              h
+                .response({
+                  status: "fail",
+                  message: `${err.message}`,
+                })
+                .code(400)
+            );
+
+          if (data.length > 0) {
+            return resolve(
+              h
+                .response({
+                  status: "success",
+                  data,
+                })
+                .code(200)
+            );
+          } else {
+            return resolve(
+              h
+                .response({
+                  status: "success",
+                  message: `Bencana alam dengan filter ${filter} tidak ditemukan!`,
+                })
+                .code(200)
+            );
+          }
+        }
+      );
+    });
   }
 };
 
-const getDisasterByIdHandler = (request, h) => {
+const getDisasterByIdHandler = async (request, h) => {
   const { id } = request.params;
 
-  const disaster = disasters.filter((d) => d.id == id)[0];
+  return new Promise((resolve, _) => {
+    con.query(
+      "SELECT * FROM bencana_alam WHERE id = '?'",
+      [id],
+      (err, data) => {
+        if (err)
+          return resolve(
+            h
+              .response({
+                status: "fail",
+                message: `${err.message}`,
+              })
+              .code(400)
+          );
 
-  if (disaster !== undefined) {
-    return {
-      status: "success",
-      data: {
-        disaster,
-      },
-    };
-  }
-
-  const response = h.response({
-    status: "fail",
-    message: "Bencana alam tidak ditemukan",
+        if (data.length > 0) {
+          return resolve(
+            h
+              .response({
+                status: "success",
+                data,
+              })
+              .code(200)
+          );
+        } else {
+          return resolve(
+            h
+              .response({
+                status: "success",
+                message: "Bencana alam tidak ditemukan",
+              })
+              .code(200)
+          );
+        }
+      }
+    );
   });
-  response.code(404);
-  return response;
 };
 
 const cannotBeAccessedByThoseMethodHandler = (request, h) => {
@@ -99,8 +184,8 @@ const endpointNotFoundHandler = (request, h) => {
 };
 
 module.exports = {
-  addDisasterHandler,
   getDisastersHandler,
+  getDisasterByFilterHandler,
   getDisasterByIdHandler,
   cannotBeAccessedByThoseMethodHandler,
   endpointNotFoundHandler,

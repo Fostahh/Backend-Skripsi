@@ -1,6 +1,6 @@
 const {
-  addDisasterHandler,
   getDisastersHandler,
+  getDisasterByFilterHandler,
   getDisasterByIdHandler,
   cannotBeAccessedByThoseMethodHandler,
   endpointNotFoundHandler,
@@ -25,9 +25,9 @@ const routes = [
     handler: getDisastersHandler,
   },
   {
-    method: "POST",
-    path: "/disasters",
-    handler: addDisasterHandler,
+    method: "GET",
+    path: "/disasters/filter/{filter}",
+    handler: getDisasterByFilterHandler,
   },
   {
     method: "*",
